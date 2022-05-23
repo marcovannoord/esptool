@@ -199,7 +199,7 @@ def print_overwrite(message, last_line=False):
 
     If output is not a TTY (for example redirected a pipe), no overwriting happens and this function is the same as print().
     """
-    if sys.stdout.isatty():
+    if hasattr(sys.stdout(), "isatty") and sys.stdout.isatty():
         print("\r%s" % message, end='\n' if last_line else '')
     else:
         print(message)
@@ -667,6 +667,9 @@ class ESPLoader(object):
             print('')  # end 'Connecting...' line
 
         if last_error is not None:
+            if self._port is not None:
+                print("Closing port due to failure")
+                self._port.close()
             raise FatalError('Failed to connect to %s: %s'
                              '\nFor troubleshooting steps visit: https://github.com/espressif/esptool#troubleshooting' % (self.CHIP_NAME, last_error))
 
