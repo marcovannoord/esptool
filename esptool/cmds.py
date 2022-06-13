@@ -741,8 +741,8 @@ def read_mac(esp, args):
 
     def print_mac(label, mac):
         print("%s: %s" % (label, ":".join(map(lambda x: "%02x" % x, mac))))
-
     print_mac("MAC", mac)
+    return "%s" % (":".join(map(lambda x: "%02x" % x, mac)))
 
 
 def chip_id(esp, args):

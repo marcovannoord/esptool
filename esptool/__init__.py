@@ -87,6 +87,7 @@ def main(argv=None, esp=None):
     """
 
     external_esp = esp is not None
+    esp_mac = None
 
     parser = argparse.ArgumentParser(
         description="esptool.py v%s - Espressif chips ROM Bootloader Utility"
@@ -656,7 +657,7 @@ def main(argv=None, esp=None):
             print("Chip is %s" % (esp.get_chip_description()))
             print("Features: %s" % ", ".join(esp.get_chip_features()))
             print("Crystal is %dMHz" % esp.get_crystal_freq())
-            read_mac(esp, args)
+            esp_mac = read_mac(esp, args)
 
         if not args.no_stub:
             if esp.secure_download_mode:
@@ -818,9 +819,12 @@ def main(argv=None, esp=None):
             print("Staying in bootloader.")
             if esp.IS_STUB:
                 esp.soft_reset(True)  # exit stub back to ROM loader
-
         if not external_esp:
             esp._port.close()
+
+        if esp_mac is not None:
+            # print(esp_mac)
+            return esp_mac
 
     else:
         operation_func(args)
