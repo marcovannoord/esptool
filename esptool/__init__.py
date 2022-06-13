@@ -30,7 +30,7 @@ __all__ = [
     "write_mem",
 ]
 
-__version__ = "4.0-dev"
+__version__ = "4.2-dev"
 
 import argparse
 import inspect
@@ -165,7 +165,7 @@ def main(argv=None, esp=None):
     )
 
     subparsers = parser.add_subparsers(
-        dest="operation", help="Run esptool {command} -h for additional help"
+        dest="operation", help="Run esptool.py {command} -h for additional help"
     )
 
     def add_spi_connection_arg(parent):
@@ -420,6 +420,14 @@ def main(argv=None, esp=None):
         "at specified offset in the binary.",
         type=arg_auto_int,
         default=None,
+    )
+    parser_elf2image.add_argument(
+        "--dont-append-digest",
+        dest="append_digest",
+        help="Don't append a SHA256 digest of the entire image after the checksum. "
+        "This argument is not supported and ignored for ESP8266.",
+        action="store_false",
+        default=True,
     )
     parser_elf2image.add_argument(
         "--use_segments",

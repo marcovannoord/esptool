@@ -18,7 +18,7 @@ cache:
 
 .test_template: &test_template
   stage: test
-  image: python:3.7
+  image: python:3.7-bullseye
   tags:
     - host_test
   dependencies: []
@@ -30,7 +30,7 @@ version_check:
   only:
     - tags
   script:
-        - VERSION=$(esptool version | head -n 1)
+        - VERSION=$(esptool.py version | head -n 1)
         - |
           if [[ "$VERSION" != *"$CI_COMMIT_TAG" ]]
           then
@@ -66,7 +66,7 @@ host_tests:
 
 check_python_style:
   stage: test
-  image: python:3.7
+  image: python:3.7-bullseye
   tags:
     - host_test
   script:
@@ -76,8 +76,19 @@ check_python_style:
     - python -m flake8
     - python -m black --check --diff .
 
-# Check all the scripts can run when installed
-check_installation_can_run:
+.run_esptool: &run_esptool |
+  esptool.py --help
+  espefuse.py --help
+  espsecure.py --help
+  python esptool.py --help
+  python espefuse.py --help
+  python espsecure.py --help
+  python -m esptool --help
+  python -m espefuse --help
+  python -m espsecure --help
+
+# Check all the scripts can run when installed, collect coverage
+check_install_coverage:
   <<: *test_template
   artifacts:
     when: always
@@ -90,9 +101,46 @@ check_installation_can_run:
     - coverage run --parallel-mode esptool.py --help
     - coverage run --parallel-mode espefuse.py --help
     - coverage run --parallel-mode espsecure.py --help
-    - esptool --help
-    - espefuse --help
-    - espsecure --help
+    - *run_esptool
+
+# Check all the scripts can run when installed
+check_install:
+  <<: *test_template
+  before_script:
+    - pip install .
+  script:
+    - *run_esptool
+
+# Check all the scripts can run when installed in editable mode
+check_install_editable:
+  <<: *test_template
+  before_script:
+    - pip install -e .
+  script:
+    - *run_esptool
+
+# Check all the scripts can run when installed in Python user install directory
+check_install_system:
+  <<: *test_template
+  before_script:
+    - pip install --user .
+  script:
+    - python esptool.py --help
+    - python espefuse.py --help
+    - python espsecure.py --help
+    - python -m esptool --help
+    - python -m espefuse --help
+    - python -m espsecure --help
+
+# Check all the scripts can run when installed in virtual environment
+check_install_venv:
+  <<: *test_template
+  before_script:
+    - python -m venv test_env
+    - source test_env/bin/activate
+    - python -m pip install .
+  script:
+    - *run_esptool
 
 # Check the stub can build and that a stub built in CI has the same contents
 # as the one embedded in esptool
@@ -122,8 +170,7 @@ check_stub_build:
 
 .target_esptool_test:
   stage: test
-  # python:3.7 (bullseye) has a problem with libffi needed for cryptography, buster doesn't
-  image: python:3.7-buster
+  image: python:3.7-bullseye
   variables:
     PYTHONPATH: "$PYTHONPATH:${CI_PROJECT_DIR}/test"
     COVERAGE_PROCESS_START: "${CI_PROJECT_DIR}/test/.covconf"
@@ -153,6 +200,8 @@ target_esptool_test_esp32:
   tags:
     - esptool_esp32_target
   script:
+    # libffi (needed for espsecure) version keeps changing in python docker images, add a symlink to the installed version
+    - ln -sfn /usr/lib/arm-linux-gnueabihf/libffi.so.7.1.0 /usr/lib/arm-linux-gnueabihf/libffi.so.6
     - coverage run --parallel-mode ${CI_PROJECT_DIR}/test/test_esptool.py /dev/serial_ports/ESP32 esp32 115200
 
 # ESP32S2
@@ -195,7 +244,7 @@ target_esptool_test_esp32s3_usbcdc:
 
 combine_reports:
   stage: report
-  image: python:3.7
+  image: python:3.7-bullseye
   artifacts:
     reports:
       cobertura: cobertura_report.xml
@@ -219,7 +268,7 @@ combine_reports:
 
 build_docs:
   stage: build_docs
-  image: python:3.7
+  image: python:3.7-bullseye
   tags:
     - build_docs
   only:
@@ -239,7 +288,7 @@ build_docs:
 
 .deploy_docs_template:
   stage: deploy_docs
-  image: python:3.7
+  image: python:3.7-bullseye
   tags:
     - deploy
   needs:
