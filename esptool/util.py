@@ -66,9 +66,12 @@ def print_overwrite(message, last_line=False):
     If output is not a TTY (for example redirected a pipe),
     no overwriting happens and this function is the same as print().
     """
-    if hasattr(sys.stdout(), "isatty") and sys.stdout.isatty():
-        print("\r%s" % message, end='\n' if last_line else '')
-    else:
+    try:
+        if hasattr(sys.stdout(), "isatty") and sys.stdout.isatty():
+            print("\r%s" % message, end='\n' if last_line else '')
+        else:
+            print(message)
+    except:
         print(message)
 
 
