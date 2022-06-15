@@ -74,6 +74,10 @@ def print_overwrite(message, last_line=False):
     except:
         print(message)
 
+def log_print(silent: bool, message):
+    if silent is False:
+        print(message) 
+
 
 class FatalError(RuntimeError):
     """

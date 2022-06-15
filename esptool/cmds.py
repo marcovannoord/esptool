@@ -41,6 +41,7 @@ from .util import (
     NotImplementedInROMError,
     NotSupportedError,
     UnsupportedCommandError,
+    log_print,
 )
 from .util import (
     div_roundup,
@@ -221,7 +222,7 @@ def detect_flash_size(esp, args):
             )
             args.flash_size = "4MB"
         else:
-            print("Auto-detected Flash size:", args.flash_size)
+            log_print(args.silent,"Auto-detected Flash size: {}".format(args.flash_size))
 
 
 def _update_image_flash_params(esp, address, args, image):
@@ -404,7 +405,7 @@ def write_flash(esp, args):
                     )
                 )
             # Print the address range of to-be-erased flash memory region
-            print(
+            log_print(args.silent,
                 "Flash will be erased from {:#010x} to {:#010x}...".format(
                     address - bytes_over,
                     div_roundup(write_end, esp.FLASH_SECTOR_SIZE)
@@ -454,7 +455,7 @@ def write_flash(esp, args):
             compress = False
 
         if args.no_stub:
-            print("Erasing flash...")
+            log_print(args.silent,"Erasing flash...")
         image = pad_to(
             argfile.read(), esp.FLASH_ENCRYPTED_WRITE_ALIGN if encrypted else 4
         )
@@ -482,10 +483,11 @@ def write_flash(esp, args):
         timeout = DEFAULT_TIMEOUT
 
         while len(image) > 0:
-            print_overwrite(
-                "Writing at 0x%08x... (%d %%)"
-                % (address + bytes_written, 100 * (seq + 1) // blocks)
-            )
+            if args.silent is False:
+                print_overwrite(
+                    "Writing at 0x%08x... (%d %%)"
+                    % (address + bytes_written, 100 * (seq + 1) // blocks)
+                )
             sys.stdout.flush()
             block = image[0 : esp.FLASH_WRITE_SIZE]
             if compress:
@@ -529,7 +531,8 @@ def write_flash(esp, args):
         if compress:
             if t > 0.0:
                 speed_msg = " (effective %.1f kbit/s)" % (uncsize / t * 8 / 1000)
-            print_overwrite(
+                if args.silent is False:
+                    print_overwrite(
                 "Wrote %d bytes (%d compressed) at 0x%08x in %.1f seconds%s..."
                 % (uncsize, bytes_sent, address, t, speed_msg),
                 last_line=True,
@@ -537,7 +540,8 @@ def write_flash(esp, args):
         else:
             if t > 0.0:
                 speed_msg = " (%.1f kbit/s)" % (bytes_written / t * 8 / 1000)
-            print_overwrite(
+                if args.silent is False:
+                    print_overwrite(
                 "Wrote %d bytes at 0x%08x in %.1f seconds%s..."
                 % (bytes_written, address, t, speed_msg),
                 last_line=True,
@@ -555,11 +559,11 @@ def write_flash(esp, args):
                     )
                     raise FatalError("MD5 of file does not match data in flash!")
                 else:
-                    print("Hash of data verified.")
+                    log_print(args.silent,"Hash of data verified.")
             except NotImplementedInROMError:
                 pass
 
-    print("\nLeaving...")
+    log_print(args.silent,"\nLeaving...")
 
     if esp.IS_STUB:
         # skip sending flash_finish to ROM loader here,
@@ -597,22 +601,22 @@ def image_info(args):
     if args.chip == "auto":
         print("WARNING: --chip not specified, defaulting to ESP8266.")
     image = LoadFirmwareImage(args.chip, args.filename)
-    print("Image version: %d" % image.version)
-    print(
+    log_print(args.silent,"Image version: %d" % image.version)
+    log_print(args.silent,
         "Entry point: %08x" % image.entrypoint
         if image.entrypoint != 0
         else "Entry point not set"
     )
-    print("%d segments" % len(image.segments))
+    log_print(args.silent,"%d segments" % len(image.segments))
     print()
     idx = 0
     for seg in image.segments:
         idx += 1
         segs = seg.get_memory_type(image)
         seg_name = ",".join(segs)
-        print("Segment %d: %r [%s]" % (idx, seg, seg_name))
+        log_print(args.silent,"Segment %d: %r [%s]" % (idx, seg, seg_name))
     calc_checksum = image.calculate_checksum()
-    print(
+    log_print(args.silent,
         "Checksum: %02x (%s)"
         % (
             image.checksum,
@@ -629,7 +633,7 @@ def image_info(args):
                 hexify(image.calc_digest).lower(),
                 "valid" if is_valid else "invalid",
             )
-            print("Validation Hash: %s" % digest_msg)
+            log_print(args.silent,"Validation Hash: %s" % digest_msg)
     except AttributeError:
         pass  # ESP8266 image has no append_digest field
 
@@ -655,7 +659,7 @@ def elf2image(args):
     if args.chip == "auto":  # Default to ESP8266 for backwards compatibility
         args.chip = "esp8266"
 
-    print("Creating {} image...".format(args.chip))
+    log_print(args.silent,"Creating {} image...".format(args.chip))
 
     if args.chip == "esp32":
         image = ESP32FirmwareImage()
@@ -725,7 +729,7 @@ def elf2image(args):
     image.merge_adjacent_segments()
     if len(image.segments) != before:
         delta = before - len(image.segments)
-        print("Merged %d ELF section%s" % (delta, "s" if delta > 1 else ""))
+        log_print(args.silent,"Merged %d ELF section%s" % (delta, "s" if delta > 1 else ""))
 
     image.verify()
 
@@ -733,14 +737,14 @@ def elf2image(args):
         args.output = image.default_output_name(args.input)
     image.save(args.output)
 
-    print("Successfully created {} image.".format(args.chip))
+    log_print(args.silent,"Successfully created {} image.".format(args.chip))
 
 
 def read_mac(esp, args):
     mac = esp.read_mac()
 
     def print_mac(label, mac):
-        print("%s: %s" % (label, ":".join(map(lambda x: "%02x" % x, mac))))
+        log_print(args.silent,"%s: %s" % (label, ":".join(map(lambda x: "%02x" % x, mac))))
     print_mac("MAC", mac)
     return "%s" % (":".join(map(lambda x: "%02x" % x, mac)))
 
@@ -748,7 +752,7 @@ def read_mac(esp, args):
 def chip_id(esp, args):
     try:
         chipid = esp.chip_id()
-        print("Chip ID: 0x%08x" % chipid)
+        log_print(args.silent,"Chip ID: 0x%08x" % chipid)
     except NotSupportedError:
         print("Warning: %s has no Chip ID. Reading MAC instead." % esp.CHIP_NAME)
         read_mac(esp, args)
@@ -763,10 +767,10 @@ def erase_flash(esp, args):
                 "Use --force to override, "
                 "please use with caution, otherwise it may brick your device!"
             )
-    print("Erasing flash (this may take a while)...")
+    log_print(args.silent,"Erasing flash (this may take a while)...")
     t = time.time()
     esp.erase_flash()
-    print("Chip erase completed successfully in %.1fs" % (time.time() - t))
+    log_print(args.silent,"Chip erase completed successfully in %.1fs" % (time.time() - t))
 
 
 def erase_region(esp, args):

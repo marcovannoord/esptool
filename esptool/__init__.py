@@ -70,6 +70,7 @@ from esptool.util import (
     FatalError,
     NotImplementedInROMError,
     flash_size_bytes,
+    log_print,
 )
 
 
@@ -147,7 +148,12 @@ def main(argv=None, esp=None):
         help="Enable trace-level output of esptool.py interactions.",
         action="store_true",
     )
-
+    parser.add_argument(
+        "--silent",
+        "-s",
+        help="Be silent",
+        action="store_true",
+    )
     parser.add_argument(
         "--override-vddsdio",
         help="Override ESP32 VDDSDIO internal voltage regulator (use with care)",
@@ -594,8 +600,10 @@ def main(argv=None, esp=None):
     argv = expand_file_arguments(argv or sys.argv[1:])
 
     args = parser.parse_args(argv)
-    print("esptool.py v%s" % __version__)
-
+    global silent
+    silent = args.silent
+    
+    log_print(silent,"esptool.py v%s" % __version__)
     # operation function can take 1 arg (args), 2 args (esp, arg)
     # or be a member function of the ESPLoader class.
 
@@ -632,7 +640,7 @@ def main(argv=None, esp=None):
 
         if args.port is None:
             ser_list = get_port_list()
-            print("Found %d serial ports" % len(ser_list))
+            log_print(silent,"Found %d serial ports" % len(ser_list))
         else:
             ser_list = [args.port]
         esp = esp or get_default_connected_device(
@@ -652,11 +660,11 @@ def main(argv=None, esp=None):
             )
 
         if esp.secure_download_mode:
-            print("Chip is %s in Secure Download Mode" % esp.CHIP_NAME)
+            log_print(silent,"Chip is %s in Secure Download Mode" % esp.CHIP_NAME)
         else:
-            print("Chip is %s" % (esp.get_chip_description()))
-            print("Features: %s" % ", ".join(esp.get_chip_features()))
-            print("Crystal is %dMHz" % esp.get_crystal_freq())
+            log_print(silent,"Chip is %s" % (esp.get_chip_description()))
+            log_print(silent,"Features: %s" % ", ".join(esp.get_chip_features()))
+            log_print(silent,"Crystal is %dMHz" % esp.get_crystal_freq())
             esp_mac = read_mac(esp, args)
 
         if not args.no_stub:
@@ -693,10 +701,10 @@ def main(argv=None, esp=None):
                 raise FatalError(
                     "Chip %s does not support --spi-connection option." % esp.CHIP_NAME
                 )
-            print("Configuring SPI flash mode...")
+            log_print(silent,"Configuring SPI flash mode...")
             esp.flash_spi_attach(args.spi_connection)
         elif args.no_stub:
-            print("Enabling default SPI flash mode...")
+            log_print(silent,"Enabling default SPI flash mode...")
             # ROM loader doesn't enable flash unless we explicitly do it
             esp.flash_spi_attach(0)
 
@@ -776,7 +784,7 @@ def main(argv=None, esp=None):
                 )
 
         if hasattr(args, "flash_size"):
-            print("Configuring flash size...")
+            log_print(silent,"Configuring flash size...")
             detect_flash_size(esp, args)
             if args.flash_size != "keep":  # TODO: should set this even with 'keep'
                 esp.flash_set_parameters(flash_size_bytes(args.flash_size))
@@ -806,17 +814,17 @@ def main(argv=None, esp=None):
         # Handle post-operation behaviour (reset or other)
         if operation_func == load_ram:
             # the ESP is now running the loaded image, so let it run
-            print("Exiting immediately.")
+            log_print(silent,"Exiting immediately.")
         elif args.after == "hard_reset":
             esp.hard_reset()
         elif args.after == "soft_reset":
-            print("Soft resetting...")
+            log_print(silent,"Soft resetting...")
             # flash_finish will trigger a soft reset
             esp.soft_reset(False)
         elif args.after == "no_reset_stub":
-            print("Staying in flasher stub.")
+            log_print(silent,"Staying in flasher stub.")
         else:  # args.after == 'no_reset'
-            print("Staying in bootloader.")
+            log_print(silent,"Staying in bootloader.")
             if esp.IS_STUB:
                 esp.soft_reset(True)  # exit stub back to ROM loader
         if not external_esp:
@@ -862,7 +870,7 @@ def expand_file_arguments(argv):
         else:
             new_args.append(arg)
     if expanded:
-        print("esptool %s" % (" ".join(new_args[1:])))
+        log_print(silent,"esptool %s" % (" ".join(new_args[1:])))
         return new_args
     return argv
 
@@ -878,7 +886,7 @@ def get_default_connected_device(
 ):
     _esp = None
     for each_port in reversed(serial_list):
-        print("Serial port %s" % each_port)
+        log_print(silent,"Serial port %s" % each_port)
         try:
             if chip == "auto":
                 _esp = detect_chip(

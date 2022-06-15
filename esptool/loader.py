@@ -870,7 +870,7 @@ class ESPLoader(object):
             return self.STUB_CLASS(self)
 
         # Upload
-        print("Uploading stub...")
+        # print("Uploading stub...")
         for field in ["text", "data"]:
             if field in stub:
                 offs = stub[field + "_start"]
@@ -881,7 +881,7 @@ class ESPLoader(object):
                     from_offs = seq * self.ESP_RAM_BLOCK
                     to_offs = from_offs + self.ESP_RAM_BLOCK
                     self.mem_block(stub[field][from_offs:to_offs], seq)
-        print("Running stub...")
+        # print("Running stub...")
         self.mem_finish(stub["entry"])
 
         p = self.read()
@@ -975,11 +975,11 @@ class ESPLoader(object):
 
     @stub_and_esp32_function_only
     def change_baud(self, baud):
-        print("Changing baud rate to %d" % baud)
+        # print("Changing baud rate to %d" % baud)
         # stub takes the new baud rate and the old one
         second_arg = self._port.baudrate if self.IS_STUB else 0
         self.command(self.ESP_CHANGE_BAUDRATE, struct.pack("<II", baud, second_arg))
-        print("Changed.")
+        # print("Changed.")
         self._set_port_baudrate(baud)
         time.sleep(0.05)  # get rid of crap sent during baud rate change
         self.flush_input()
