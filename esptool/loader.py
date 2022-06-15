@@ -547,7 +547,7 @@ class ESPLoader(object):
                 self.sync()
                 return None
             except FatalError as e:
-                print(".", end="")
+                # print(".", end="")
                 sys.stdout.flush()
                 time.sleep(0.05)
                 last_error = e
@@ -887,7 +887,7 @@ class ESPLoader(object):
         p = self.read()
         if p != b"OHAI":
             raise FatalError("Failed to start stub. Unexpected response: %s" % p)
-        print("Stub running...")
+        # print("Stub running...")
         return self.STUB_CLASS(self)
 
     @stub_and_esp32_function_only
@@ -913,7 +913,7 @@ class ESPLoader(object):
             timeout = timeout_per_mb(
                 ERASE_REGION_TIMEOUT_PER_MB, write_size
             )  # ROM performs the erase up front
-        print("Compressed %d bytes to %d..." % (size, compsize))
+        # print("Compressed %d bytes to %d..." % (size, compsize))
         params = struct.pack(
             "<IIII", write_size, num_blocks, self.FLASH_WRITE_SIZE, offset
         )
